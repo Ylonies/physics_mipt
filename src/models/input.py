@@ -9,8 +9,8 @@ class InputHandler:
         params = {}
         
         params['v0'] = float(input("Начальная скорость (м/с): "))
-        if not (0 < params['v0'] <= 200):
-            raise ValueError("Начальная скорость должна быть в диапазоне (0, 200] м/с.")
+        if not (0 < params['v0'] <= 340):
+            raise ValueError("Начальная скорость должна быть в диапазоне (0, 340] м/с.")
 
         alpha_deg = float(input("Угол броска в градусах: "))
         if not (0 < alpha_deg <= 90):
