@@ -1,10 +1,13 @@
+import sys
+import os
 import builtins
 import pytest
-import main
 
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../src")))
+
+from m1_stone_flight import main
 
 def run_with_inputs(inputs, monkeypatch):
-    """Вспомогательная функция для подмены input и запуска симуляции."""
     it = iter(inputs)
     monkeypatch.setattr(builtins, "input", lambda _: next(it))
     sim = main.StoneFlight()
@@ -45,4 +48,3 @@ def test_invalid_inputs(inputs, expected_error, monkeypatch, capsys):
     captured = capsys.readouterr()
     assert "Ошибка ввода" in captured.out
     assert expected_error.lower() in captured.out.lower()
-

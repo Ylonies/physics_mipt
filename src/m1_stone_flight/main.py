@@ -1,4 +1,4 @@
-from models import InputHandler, PhysicsModels, TrajectorySolver, ResultAnalyzer, ResultVisualizer
+from .models import InputHandler, PhysicsModels, TrajectorySolver, ResultAnalyzer, ResultVisualizer
 
 class StoneFlight:
     def __init__(self, g=9.81):
