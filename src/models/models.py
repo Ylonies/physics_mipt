@@ -44,7 +44,6 @@ class PhysicsModels:
         return model, "Лобовое сопротивление"
 
     def get_model(self, params):
-        """Выбор модели на основе пользовательского ввода"""
         if params['model_choice'] == "1":
             return self.viscous_friction_model(params)
         else:
