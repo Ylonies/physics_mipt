@@ -20,7 +20,8 @@ class InputHandler:
         params['gamma'] = float(input("Коэффициент сопротивления: "))
         if params['gamma'] < 0:
             raise ValueError("Коэффициент сопротивления не может быть отрицательным.")
-
+        if params['gamma'] >= 1:
+            raise ValueError("Коэффициент сопротивления должен быть меньше 1.")
         params['m'] = float(input("Масса тела (кг): "))
         if params['m'] <= 0:
             raise ValueError("Масса должна быть положительной.")

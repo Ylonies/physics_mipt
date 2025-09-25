@@ -18,7 +18,7 @@ class TrajectorySolver:
         resistance_factor = 1 + 2 * (params['gamma'] / m)
         t_max = t_base * resistance_factor
         t_span = (0, t_max)
-        t_eval = np.linspace(0, t_max, 1000)
+        t_eval = np.linspace(0, t_max, 100000)
         
         def hit_ground(t, state):
             return state[1]
