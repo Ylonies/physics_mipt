@@ -13,8 +13,8 @@ class InputHandler:
             raise ValueError("Начальная скорость должна быть в диапазоне (0, 340] м/с.")
 
         alpha_deg = float(input("Угол броска в градусах: "))
-        if not (0 < alpha_deg <= 90):
-            raise ValueError("Угол броска должен быть в пределах (0, 90] градусов.")
+        if not (0 <= alpha_deg <= 90):
+            raise ValueError("Угол броска должен быть в пределах [0, 90] градусов.")
         params['alpha'] = math.radians(alpha_deg)
 
         params['gamma'] = float(input("Коэффициент сопротивления: "))
