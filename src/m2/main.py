@@ -1,41 +1,46 @@
-import numpy as np
-import matplotlib.pyplot as plt
+from .models import InputHandler, PhysicsModels, ResultVisualizer
 
-# --- параметры системы ---
-m = 0.1        # масса шара, кг
-k = 1000       # жесткость, Н/м
-v0 = 2.0       # начальная скорость к стенке, м/с
+class CollisionSimulator:
+    def __init__(self):
+        self.physics_models = PhysicsModels()
+    
+    def run(self):
+        try:
+            print("=== Моделирование столкновений шаров ===")
+            params = InputHandler.get_parameters()
+            results, model_name = self.physics_models.get_model(params)
+            self._print_results(results, params, model_name)
+            ResultVisualizer.plot(results, params, model_name)
 
-# --- расчет ---
-omega = np.sqrt(k / m)        # частота
-t_c = np.pi / omega           # длительность контакта
-t = np.linspace(0, 1.5 * t_c, 500)  # временной массив
+        except ValueError as e:
+            print(f"Ошибка ввода: {e}")
+        except Exception as e:
+            print(f"Ошибка вычислений: {e}")
+    
+    def _print_results(self, results, params, model_name):
+        print(f"\n=== РЕЗУЛЬТАТЫ ===")
+        print(f"Модель: {model_name}")
+        
+        if params['object_choice'] == '1':
+            if params['model_choice'] == '1': 
+                print(f"Скорость после столкновения: {results['v_after']:.2f} м/с")
+                print(f"Угол отражения: {np.degrees(results['alpha_after']):.1f}°")
+            else:
+                print(f"Время контакта: {results['contact_time']:.4f} с")
+                print(f"Максимальная деформация: {results['max_deformation']:.4f} м")
+                print(f"Максимальная сила: {results['max_force']:.2f} Н")
+        else:
+            if params['model_choice'] == '1':
+                print(f"Скорость первого шара после: {results['v1_after']:.2f} м/с")
+                print(f"Скорость второго шара после: {results['v2_after']:.2f} м/с")
+            else:
+                print(f"Время контакта: {results['contact_time']:.4f} с")
+                print(f"Максимальная деформация: {results['max_deformation']:.4f} м")
+                print(f"Максимальная сила: {results['max_force']:.2f} Н")
+                print(f"Скорость первого шара после: {results['v1_after']:.2f} м/с")
+                print(f"Скорость второго шара после: {results['v2_after']:.2f} м/с")
 
-# --- аналитическое решение ---
-# пока x>0 (контакт), шар сжат:
-x = np.where(t <= t_c, (v0 / omega) * np.sin(omega * t), 0)
-v = np.where(t <= t_c, v0 * np.cos(omega * t), -v0)  # скорость меняет знак после удара
-F = np.where(t <= t_c, -k * x, 0)                    # сила контакта
-
-# --- визуализация ---
-plt.figure(figsize=(10,6))
-
-plt.subplot(3,1,1)
-plt.plot(t, x)
-plt.ylabel("Сжатие x(t), м")
-plt.grid()
-
-plt.subplot(3,1,2)
-plt.plot(t, v)
-plt.ylabel("Скорость v(t), м/с")
-plt.grid()
-
-plt.subplot(3,1,3)
-plt.plot(t, F)
-plt.ylabel("Сила F(t), Н")
-plt.xlabel("Время t, с")
-plt.grid()
-
-plt.suptitle("Модель упругого столкновения шара со стенкой (закон Гука)")
-plt.tight_layout()
-plt.show()
+if __name__ == "__main__":
+    import numpy as np
+    simulator = CollisionSimulator()
+    simulator.run()

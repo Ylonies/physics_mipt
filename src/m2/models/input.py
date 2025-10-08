@@ -49,7 +49,7 @@ class InputHandler:
         print("2 - шар деформируется согласно закону Гука: F ~ -delta_x")
 
         params['model_choice'] = input("Введите 1 или 2: ").strip()
-        if (params['model_choice'] == 2):
+        if params['model_choice'] == '2':
             params['k'] = float(input("Коэффициент упругости (Н/м): "))
             if params['k'] < 0:
                 raise ValueError("Коэффициент упругости не может быть отрицательным.")
