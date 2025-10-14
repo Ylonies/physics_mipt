@@ -45,15 +45,13 @@ class CollisionSolver:
         k = params['k']
         v0 = params['v0']
         
-        omega = np.sqrt(k / m)        # частота
-        t_c = np.pi / omega           # длительность контакта
-        t = np.linspace(0, 1.5 * t_c, 500)  # временной массив
+        omega = np.sqrt(k / m)
+        t_c = np.pi / omega
+        t = np.linspace(0, 1.5 * t_c, 500)
 
-        # аналитическое решение
-        # пока x>0 (контакт), шар сжат:
-        x = np.where(t <= t_c, (v0 / omega) * np.sin(omega * t), 0) 
-        v = np.where(t <= t_c, v0 * np.cos(omega * t), -v0) # скорость меняет знак после удара
-        F = np.where(t <= t_c, -k * x, 0) # сила контакта
+        x = np.where(t <= t_c, (v0 / omega) * np.sin(omega * t), 0)
+        v = np.where(t <= t_c, v0 * np.cos(omega * t), -v0)
+        F = np.where(t <= t_c, -k * x, 0)
 
         results = {
             'time': t,
@@ -68,37 +66,39 @@ class CollisionSolver:
         return results
     
     def solve_hooke_balls(self, params):
-        """Решает столкновение двух шаров по закону Гука"""
         m1 = params['m1']
         m2 = params['m2']
         k = params['k']
-        v0 = params['v0']
-        u0 = params['u0']
-        
+        v1_initial = params['v0']
+        v2_initial = params['u0']
+
         mu = m1 * m2 / (m1 + m2)
-        v_rel = v0 - u0
+        v_rel_initial = v1_initial - v2_initial
         
         omega = np.sqrt(k / mu)
         t_c = np.pi / omega
         t = np.linspace(0, 1.5 * t_c, 500)
 
-        x = np.where(t <= t_c, (v_rel / omega) * np.sin(omega * t), 0)
-        v = np.where(t <= t_c, v_rel * np.cos(omega * t), -v_rel)
-        F = np.where(t <= t_c, -k * x, 0)
+        x_rel = np.where(t <= t_c, (v_rel_initial / omega) * np.sin(omega * t), 0)
+        v_rel = np.where(t <= t_c, v_rel_initial * np.cos(omega * t), -v_rel_initial)
+        F = np.where(t <= t_c, -k * x_rel, 0)
 
-        v1_after = ((m1 - m2) * v0 + 2 * m2 * u0) / (m1 + m2)
-        v2_after = ((m2 - m1) * u0 + 2 * m1 * v0) / (m1 + m2)
+        v_cm = (m1 * v1_initial + m2 * v2_initial) / (m1 + m2)
+        v1 = v_cm + (m2 / (m1 + m2)) * v_rel
+        v2 = v_cm - (m1 / (m1 + m2)) * v_rel
 
         results = {
             'time': t,
-            'deformation': x,
-            'velocity': v,
+            'deformation': x_rel,
+            'velocity': v_rel,
             'force': F,
+            'v1': v1,
+            'v2': v2,
+            'v1_after': v1[-1],
+            'v2_after': v2[-1],
             'contact_time': t_c,
-            'max_deformation': np.max(x),
-            'max_force': np.max(F),
-            'v1_after': v1_after,
-            'v2_after': v2_after
+            'max_deformation': np.max(x_rel),
+            'max_force': np.max(F)
         }
         
         return results
