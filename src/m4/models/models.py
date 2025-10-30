@@ -5,6 +5,7 @@ import numpy as np
 class PhysicsModels:
     def __init__(self, g: float = 9.81):
         self.g = g
+        
 
     # --- 1) Inclined plane, pure rolling (no slip) ---
     def incline_no_slip(self, params):
@@ -74,74 +75,66 @@ class PhysicsModels:
         return model, "Наклон с возможным проскальзыванием", initial_state, t_span, t_eval
 
     # --- 2) Arbitrary rolling on a horizontal plane (vector form) ---
+
     def horizontal_general(self, params):
+        """
+        Горизонтальная плоскость: шар катится под действием
+        постоянной силы F по оси X. Унифицировано под формат [x, y, vx, vy, wx, wy].
+        """
+
         m = params['m']
         R = params['R']
         mu = params['mu']
+        F = params['F']  # постоянная горизонтальная сила (по оси X)
         g = self.g
         I = (2.0 / 5.0) * m * R * R
-        Fx = params['Fx']
-        Fy = params['Fy']
+        F_max = mu * m * g
 
         ez = np.array([0.0, 0.0, 1.0])
 
         def model(t, state):
             x, y, vx, vy, wx, wy = state
+
             v = np.array([vx, vy])
             w = np.array([wx, wy, 0.0])
+            F_ext = np.array([F, 0.0])  
 
-            # External in-plane force
-            F_ext = np.array([Fx, Fy])
-
-            # relative velocity at contact: v - R (omega × ez)
-            omega_cross_ez = np.cross(w, ez)  # 3D
+            omega_cross_ez = np.cross(w, ez)
             v_rel = v - R * omega_cross_ez[:2]
 
-            F_max = mu * m * g
-
-            if np.linalg.norm(v_rel) < 1e-10:
-                # candidate static friction that enforces no slip
-                F_static = - (I / (I + m * R * R)) * F_ext
-                if np.linalg.norm(F_static) <= F_max:
-                    F_tan = F_static
-                    a_vec = (F_ext + F_tan) / m
-                    M_vec = -R * np.cross(ez, np.array([F_tan[0], F_tan[1], 0.0]))
-                    w_dot = M_vec / I
-                else:
-                    # slips in direction of needed friction (which equals F_static direction)
-                    dir_vec = F_static
-                    if np.linalg.norm(dir_vec) < 1e-14:
-                        dir_vec = np.array([0.0, 0.0])
-                    else:
-                        dir_vec = dir_vec / np.linalg.norm(dir_vec)
-                    F_tan = -F_max * dir_vec
-                    a_vec = (F_ext + F_tan) / m
-                    M_vec = -R * np.cross(ez, np.array([F_tan[0], F_tan[1], 0.0]))
-                    w_dot = M_vec / I
+            if np.linalg.norm(v_rel) < 1e-8:
+                A = np.eye(2) / m + (R**2 / I) * np.array([[0, -1], [1, 0]])
+                F_tan = -np.linalg.solve(A, F_ext)
+                if np.linalg.norm(F_tan) > F_max:
+                    F_tan = -F_max * F_tan / np.linalg.norm(F_tan)
             else:
-                dir_vec = v_rel / np.linalg.norm(v_rel)
-                F_tan = -F_max * dir_vec
-                a_vec = (F_ext + F_tan) / m
-                M_vec = -R * np.cross(ez, np.array([F_tan[0], F_tan[1], 0.0]))
-                w_dot = M_vec / I
+                F_tan = -F_max * v_rel / np.linalg.norm(v_rel)
 
-            dx_dt = vx
-            dy_dt = vy
-            dvx_dt = a_vec[0]
-            dvy_dt = a_vec[1]
-            dwx_dt = w_dot[0]
-            dwy_dt = w_dot[1]
+            a_vec = (F_ext + F_tan) / m
+            M_vec = -R * np.cross(ez, np.array([F_tan[0], F_tan[1], 0.0]))
+            w_dot = M_vec / I
+
+            dx_dt, dy_dt = vx, vy
+            dvx_dt, dvy_dt = a_vec
+            dwx_dt, dwy_dt = w_dot[0], w_dot[1]
+
             return [dx_dt, dy_dt, dvx_dt, dvy_dt, dwx_dt, dwy_dt]
 
+        x0 = params['x0']
+        y0 = 0.0
+        vx0 = params['v0']
+        vy0 = 0.0
+        wx0 = 0.0
+        wy0 = params['omega0']
         t_end = params['t_end']
-        initial_state = [
-            params['x0'], params['y0'],
-            params['vx0'], params['vy0'],
-            params['omega_x0'], params['omega_y0'],
-        ]
+
+        initial_state = [x0, y0, vx0, vy0, wx0, wy0]
         t_span = (0.0, t_end)
         t_eval = np.linspace(0.0, t_end, 3000)
-        return model, "Горизонтальная плоскость (произвольное качение)", initial_state, t_span, t_eval
+
+        title = "Горизонтальная плоскость: произвольное качение с постоянной силой"
+
+        return model, title, initial_state, t_span, t_eval
 
     def get_model(self, params):
         choice = params['choice']
@@ -149,6 +142,7 @@ class PhysicsModels:
             return self.incline_no_slip(params)
         if choice == '1b':
             return self.incline_with_slip(params)
-        return self.horizontal_general(params)
+        if choice == '2':
+            return self.horizontal_general(params)
 
 

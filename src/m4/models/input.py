@@ -34,15 +34,11 @@ class InputHandler:
             params['v0'] = float(input("Начальная скорость вдоль плоскости v0 (м/с): "))
             params['omega0'] = float(input("Начальная угл. скорость ω0 (рад/с): "))
             params['t_end'] = float(input("Время моделирования (с): "))
-        else:
+        else: 
             params['x0'] = 0.0
-            params['y0'] = 0.0
-            params['vx0'] = float(input("Начальная скорость vx0 (м/с): "))
-            params['vy0'] = float(input("Начальная скорость vy0 (м/с): "))
-            params['omega_x0'] = float(input("Начальная угл. скорость ωx0 (рад/с): "))
-            params['omega_y0'] = float(input("Начальная угл. скорость ωy0 (рад/с): "))
-            params['Fx'] = float(input("Постоянная внешняя сила Fx (Н): "))
-            params['Fy'] = float(input("Постоянная внешняя сила Fy (Н): "))
+            params['v0'] = float(input("Начальная поступательная скорость v0 (м/с): "))
+            params['omega0'] = float(input("Начальная угловая скорость ω0 (рад/с): "))
+            params['F'] = float(input("Постоянная горизонтальная сила F (Н): "))
             params['t_end'] = float(input("Время моделирования (с): "))
 
         return params
