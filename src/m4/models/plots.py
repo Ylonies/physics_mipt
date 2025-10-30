@@ -10,7 +10,6 @@ class ResultVisualizer:
 
         plt.figure(figsize=(12, 10))
 
-        # Trajectory/position
         plt.subplot(2, 2, (1, 2))
         if 'Наклон' in model_name:
             s = results.get('s')
