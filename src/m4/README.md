@@ -83,7 +83,7 @@ I = \frac{2}{5} m R^2
 
 Активируйте окружение и выполните:
 ```bash
-uv run python -m src.m4_sphere_on_table.main
+uv run python -m src.m4.main
 ```
 
 Далее следуйте интерактивным подсказкам в терминале для выбора сценария (1 / 1b / 2)  
