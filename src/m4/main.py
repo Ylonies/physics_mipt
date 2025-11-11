@@ -21,10 +21,10 @@ class RollingSphereSim:
                 e_end = results['energy_total'][-1]
                 print(f"Энергия начальная: {e0:.6f} Дж, конечная: {e_end:.6f} Дж")
                 print(f"ΔE: {e_end - e0:.6e} Дж")
-            if 'slip_fraction' in results:
-                print(f"Доля времени в проскальзывании: {results['slip_fraction']*100:.2f}%")
 
-            # plots
+            if 'slip_fraction' in results:
+                print(f"Доля времени в проскальзывании: {results['slip_fraction'] * 100:.2f}%")
+
             ResultVisualizer.plot(results, params, model_name)
 
         except ValueError as e:
@@ -35,4 +35,3 @@ class RollingSphereSim:
 
 if __name__ == "__main__":
     RollingSphereSim().run()
-

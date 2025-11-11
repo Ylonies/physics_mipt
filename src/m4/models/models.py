@@ -20,13 +20,17 @@ class PhysicsModels:
             s, v, omega = state
             ds_dt = v
             dv_dt = a
-            domega_dt = a / R
+            domega_dt = a / R  
             return [ds_dt, dv_dt, domega_dt]
 
         t_end = params['t_end']
-        initial_state = [params['s0'], params['v0'], params['omega0']]
+
+        initial_omega = params['v0'] / R
+
+        initial_state = [params['s0'], params['v0'], initial_omega]
         t_span = (0.0, t_end)
         t_eval = np.linspace(0.0, t_end, 2000)
+
         return model, "Наклон без проскальзывания", initial_state, t_span, t_eval
 
     # --- 1b) Inclined plane with possible slip (Coulomb friction) ---
@@ -38,7 +42,7 @@ class PhysicsModels:
         g = self.g
         I = (2.0 / 5.0) * m * R * R
 
-        # helper: sign with zero -> 0
+        # helper: знак с нулем -> 0
         def sgn(x: float) -> float:
             if x > 0:
                 return 1.0
@@ -49,29 +53,34 @@ class PhysicsModels:
         def model(t, state):
             s, v, omega = state
 
-            # Required friction for sticking (no slip) regime
+            # требуемое ускорение без скольжения
             a_ns = g * math.sin(alpha) / (1.0 + I / (m * R * R))
             F_req = m * (g * math.sin(alpha) - a_ns)
-            F_max = mu * m * g * math.cos(alpha)
+            F_max = mu * m * g
 
-            if abs(v - omega * R) < 1e-10 and abs(F_req) <= F_max:
+            # проверка режима скольжения
+            slip_threshold = 1e-8
+            if abs(v - omega * R) < slip_threshold and abs(F_req) <= F_max:
+                # без скольжения
                 a = a_ns
                 alpha_dot = a / R
-                F = F_req
             else:
-                F = - F_max * sgn(v - omega * R)  # kinetic friction
-                a = g * math.sin(alpha) + F / m
-                alpha_dot = - (F * R) / I
+                # скольжение
+                F_kin = - F_max * sgn(v - omega * R)
+                a = g * math.sin(alpha) - F_kin / m   # трение замедляет движение
+                alpha_dot = F_kin * R / I
 
             ds_dt = v
             dv_dt = a
             domega_dt = alpha_dot
+
             return [ds_dt, dv_dt, domega_dt]
 
         t_end = params['t_end']
         initial_state = [params['s0'], params['v0'], params['omega0']]
         t_span = (0.0, t_end)
         t_eval = np.linspace(0.0, t_end, 4000)
+
         return model, "Наклон с возможным проскальзыванием", initial_state, t_span, t_eval
 
     # --- 2) Arbitrary rolling on a horizontal plane (vector form) ---

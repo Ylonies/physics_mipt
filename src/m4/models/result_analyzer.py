@@ -22,16 +22,18 @@ class ResultAnalyzer:
             s = solution.y[0]
             v = solution.y[1]
             omega = solution.y[2]
-            height = - s * np.sin(params['alpha'])
-            translational = 0.5 * m * v * v
-            rotational = 0.5 * I * omega * omega
+
+            height = (0 - s) * np.sin(params['alpha']) 
             potential = m * g * height
+
+            translational = 0.5 * m * v**2
+            rotational = 0.5 * I * omega**2
             energies = translational + rotational + potential
 
-            slip_indicator = np.abs(v - omega * R) > 1e-7
             y['s'] = s
             y['v'] = v
             y['omega'] = omega
+            y['y'] = (0 - s) * np.sin(params['alpha'])  
         else:
             vx = solution.y[2]
             vy = solution.y[3]
