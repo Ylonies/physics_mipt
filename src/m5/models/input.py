@@ -15,8 +15,15 @@ class InputHandler:
         params['theta0'] = math.radians(params['theta0_deg'])
         params['omega0'] = float(input("Начальная угловая скорость ω0 (рад/с): "))
         params['t_end'] = float(input("Время моделирования (с): "))
+        if params['t_end'] <= 0:
+            raise ValueError("Время моделирования должно быть положительным.")
         gamma = input("Добавить трение? (y/n): ").strip().lower()
-        params['gamma'] = float(input("Коэффициент трения γ: ")) if gamma == 'y' else 0.0
+        if gamma == 'y':
+            params['gamma'] = float(input("Коэффициент трения γ: "))
+            if params['gamma'] < 0:
+                raise ValueError("Коэффициент трения γ должен быть неотрицательным.")
+        else:
+            params['gamma'] = 0.0
 
         a = params['a']
         b = params['b']
