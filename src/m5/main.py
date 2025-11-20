@@ -4,10 +4,12 @@ from .models import InputHandler, PhysicsModels, ResultAnalyzer, ResultVisualize
 
 if __name__ == "__main__":
     params = InputHandler.get_parameters()
+
     modeler = PhysicsModels()
-    model, y0, t_span, t_eval = modeler.ellipse_pendulum_model(params)
-    solution = solve_ivp(model, t_span, y0, t_eval=t_eval, rtol=1e-8)
+    t, theta, omega = modeler.solve_symplectic(params)
+
     analyzer = ResultAnalyzer()
-    results = analyzer.analyze(solution, params)
+    results = analyzer.analyze(t, theta, omega, params)
+
     visualizer = ResultVisualizer()
     visualizer.plot(results)

@@ -6,23 +6,28 @@ class ResultVisualizer:
         t = results['time']
         theta = results['theta']
         omega = results['omega']
-        E = results['energy_total']
+        K = results['K']
+        V = results['V']
 
-        plt.figure(figsize=(12, 5))
+        E = results['E']
+
+        plt.figure(figsize=(12, 6))
 
         plt.subplot(1, 2, 1)
-        plt.plot(t, theta, 'b', label='θ(t)')
-        plt.plot(t, omega, 'r', label='ω(t)')
-        plt.xlabel('t, с')
-        plt.ylabel('θ, ω')
+        plt.plot(t, theta, label='θ(t)')
+        plt.plot(t, omega, label='ω(t)')
+        plt.xlabel('t, c')
         plt.legend()
         plt.title('Угловое отклонение и скорость')
 
         plt.subplot(1, 2, 2)
-        plt.plot(t, E, 'g', label='E(t)')
-        plt.xlabel('t, с')
+        plt.plot(t, K, label='K (кинетическая)')
+        plt.plot(t, V, label='V (потенциальная)')
+        plt.plot(t, E, label='E (полная)', linewidth=2)
+        plt.xlabel('t, c')
         plt.ylabel('Энергия, Дж')
-        plt.title('Полная энергия маятника')
+        plt.title('Энергия маятника (симплектический метод)')
+        plt.legend()
         plt.grid(True)
 
         plt.tight_layout()

@@ -2,21 +2,21 @@ import numpy as np
 
 class ResultAnalyzer:
     @staticmethod
-    def analyze(solution, params):
-        theta = solution.y[0]
-        omega = solution.y[1]
+    def analyze(time, theta, omega, params):
         m = params['m']
         l = params['l']
         I = params['I']
         g = 9.81
 
-        kinetic = 0.5 * I * omega**2
-        potential = m * g * l * (1 - np.cos(theta))
-        energy_total = kinetic + potential
+        K = 0.5 * I * omega**2
+        V = m * g * l * (1 - np.cos(theta))
+        E = K + V
 
         return {
-            'time': solution.t,
+            'time': time,
             'theta': theta,
             'omega': omega,
-            'energy_total': energy_total
+            'K': K,
+            'V': V,
+            'E': E
         }
