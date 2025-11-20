@@ -34,23 +34,116 @@ def test_valid_inputs(inputs, monkeypatch):
     assert params['gamma'] >= 0.0
 
 
-@pytest.mark.parametrize("inputs", [
-    # non-positive a
-    ["0.0", "0.2", "1.0", "5.0", "0.0", "1.0", "n"],
-    ["-0.1", "0.2", "1.0", "5.0", "0.0", "1.0", "n"],
-    # non-positive b
-    ["0.1", "0.0", "1.0", "5.0", "0.0", "1.0", "n"],
-    ["0.1", "-0.2", "1.0", "5.0", "0.0", "1.0", "n"],
-    # non-positive m
-    ["0.1", "0.2", "0.0", "5.0", "0.0", "1.0", "n"],
-    ["0.1", "0.2", "-1.0", "5.0", "0.0", "1.0", "n"],
-    # non-positive t_end
-    ["0.1", "0.2", "1.0", "5.0", "0.0", "0.0", "n"],
-    ["0.1", "0.2", "1.0", "5.0", "0.0", "-1.0", "n"],
-    # negative gamma when enabled
-    ["0.1", "0.2", "1.0", "5.0", "0.0", "2.0", "y", "-0.01"],
-])
-def test_invalid_inputs(inputs, monkeypatch):
-    with pytest.raises(ValueError):
-        run_with_inputs(inputs, monkeypatch)
+def test_reprompt_a(monkeypatch, capsys):
+    # a invalid (0.0), then corrected to 0.10
+    inputs = [
+        "0.0", "0.10",    # a
+        "0.20",           # b
+        "1.0",            # m
+        "5.0",            # theta0_deg
+        "0.2",            # omega0
+        "3.0",            # t_end
+        "n"               # no damping
+    ]
+    params = run_with_inputs(inputs, monkeypatch)
+    out = capsys.readouterr().out
+    assert "Значение должно быть >=" in out
+    assert params['a'] == pytest.approx(0.10)
+
+
+def test_reprompt_b(monkeypatch, capsys):
+    inputs = [
+        "0.10",           # a
+        "0.0", "0.20",    # b invalid then valid
+        "1.0",
+        "5.0",
+        "0.2",
+        "3.0",
+        "n"
+    ]
+    params = run_with_inputs(inputs, monkeypatch)
+    out = capsys.readouterr().out
+    assert "Значение должно быть >=" in out
+    assert params['b'] == pytest.approx(0.20)
+
+
+def test_reprompt_m(monkeypatch, capsys):
+    inputs = [
+        "0.10",
+        "0.20",
+        "0.0", "1.0",     # m invalid then valid
+        "5.0",
+        "0.2",
+        "3.0",
+        "n"
+    ]
+    params = run_with_inputs(inputs, monkeypatch)
+    out = capsys.readouterr().out
+    assert "Значение должно быть >=" in out
+    assert params['m'] == pytest.approx(1.0)
+
+
+def test_reprompt_theta0(monkeypatch, capsys):
+    inputs = [
+        "0.10",
+        "0.20",
+        "1.0",
+        "100", "10",      # theta0_deg out of range then valid
+        "0.2",
+        "3.0",
+        "n"
+    ]
+    params = run_with_inputs(inputs, monkeypatch)
+    out = capsys.readouterr().out
+    assert "Значение должно быть <=" in out
+    assert params['theta0_deg'] == pytest.approx(10.0)
+
+
+def test_reprompt_t_end(monkeypatch, capsys):
+    inputs = [
+        "0.10",
+        "0.20",
+        "1.0",
+        "5.0",
+        "0.2",
+        "0.0", "2.0",     # t_end invalid then valid
+        "n"
+    ]
+    params = run_with_inputs(inputs, monkeypatch)
+    out = capsys.readouterr().out
+    assert "Значение должно быть >=" in out
+    assert params['t_end'] == pytest.approx(2.0)
+
+
+def test_reprompt_yes_no(monkeypatch, capsys):
+    inputs = [
+        "0.10",
+        "0.20",
+        "1.0",
+        "5.0",
+        "0.2",
+        "3.0",
+        "k", "n"          # invalid then 'n'
+    ]
+    params = run_with_inputs(inputs, monkeypatch)
+    out = capsys.readouterr().out
+    assert "Пожалуйста, введите 'y' или 'n'." in out
+    assert params['gamma'] == pytest.approx(0.0)
+
+
+def test_reprompt_gamma(monkeypatch, capsys):
+    inputs = [
+        "0.10",
+        "0.20",
+        "1.0",
+        "5.0",
+        "0.2",
+        "3.0",
+        "y",
+        "-0.01", "0.05"   # gamma invalid then valid
+    ]
+    params = run_with_inputs(inputs, monkeypatch)
+    out = capsys.readouterr().out
+    assert "Значение должно быть >=" in out
+    assert params['gamma'] == pytest.approx(0.05)
 
