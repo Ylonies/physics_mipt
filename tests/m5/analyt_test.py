@@ -1,0 +1,164 @@
+import math
+import numpy as np
+import pytest
+from scipy.integrate import solve_ivp
+from scipy.special import ellipk, ellipj
+import sys
+import os
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../src")))
+
+from m5.models import PhysicsModels, ResultAnalyzer
+
+
+def _complete_params(params):
+    a = params['a']
+    b = params['b']
+    m = params['m']
+    I_cm = 0.25 * m * (a**2 + b**2)
+    I = I_cm + m * b**2
+    params['I'] = I
+    params['l'] = b
+    return params
+
+
+def _natural_frequency(params, g=9.81):
+    m = params['m']
+    l = params['l']
+    I = params['I']
+    return math.sqrt(m * g * l / I)
+
+
+def _theta_linear_undamped(t, theta0, omega0, omega_n):
+    return theta0 * np.cos(omega_n * t) + (omega0 / omega_n) * np.sin(omega_n * t)
+
+
+def _theta_linear_with_friction(t, theta0, omega0, omega_n, I, gamma):
+    beta = gamma / (2.0 * I)
+    omega_d2 = max(omega_n**2 - beta**2, 0.0)
+    omega_d = math.sqrt(omega_d2)
+    if omega_d == 0.0:
+        return np.full_like(t, theta0)
+    exp_term = np.exp(-beta * t)
+    return exp_term * (
+        theta0 * np.cos(omega_d * t) + (omega0 + beta * theta0) / omega_d * np.sin(omega_d * t)
+    )
+
+
+@pytest.fixture
+def models():
+    return PhysicsModels()
+
+
+@pytest.fixture
+def base_params_small():
+    return {
+        'a': 0.10,
+        'b': 0.20,
+        'm': 1.0,
+        'theta0': math.radians(1.0),
+        'omega0': 0.2,
+        't_end': 5.0,
+        'gamma': 0.0
+    }
+
+
+def _solve(models, params):
+    model, y0, t_span, t_eval = models.ellipse_pendulum_model(params)
+    sol = solve_ivp(model, t_span, y0, t_eval=t_eval, rtol=1e-9, atol=1e-12)
+    return sol
+
+
+def test_small_angle_no_friction_matches_linear(models, base_params_small):
+    # малые колебания, без трения
+    params = _complete_params(dict(base_params_small))
+    params['gamma'] = 0.0
+
+    sol = _solve(models, params)
+    results = ResultAnalyzer.analyze(sol.t, sol.y[0], sol.y[1], params)
+
+    t = results['time']
+    theta_num = results['theta']
+
+    omega_n = _natural_frequency(params)
+    theta_lin = _theta_linear_undamped(t, params['theta0'], params['omega0'], omega_n)
+
+    assert np.allclose(theta_num, theta_lin, atol=1e-3)
+
+    E = results['E']
+    assert (E.max() - E.min()) / max(E.max(), 1e-9) < 1e-3
+
+
+def test_small_angle_with_friction_matches_linear(models, base_params_small):
+    # малые колебания, с вязким трением
+    params = _complete_params(dict(base_params_small))
+
+    omega_n = _natural_frequency(params)
+    I = params['I']
+    params['gamma'] = 0.2 * I * omega_n
+
+    sol = _solve(models, params)
+    results = ResultAnalyzer.analyze(sol.t, sol.y[0], sol.y[1], params)
+
+    t = results['time']
+    theta_num = results['theta']
+
+    theta_lin = _theta_linear_with_friction(t, params['theta0'], params['omega0'], omega_n, I, params['gamma'])
+    assert np.allclose(theta_num, theta_lin, atol=5e-3)
+
+    E = results['E']
+    dE = np.diff(E)
+    assert np.sum(dE > 1e-6) <= 2
+
+
+def test_small_angle_no_friction_random(models):
+    # малые углы, без трения
+    rng = np.random.default_rng(123)
+    for _ in range(5):
+        a = rng.uniform(0.05, 0.3)
+        b = rng.uniform(0.05, 0.3)
+        m = rng.uniform(0.5, 3.0)
+        theta0 = math.radians(rng.uniform(-2.0, 2.0))
+        omega0 = rng.uniform(-0.5, 0.5)
+        t_end = rng.uniform(1.0, 3.0)
+        params = _complete_params({
+            'a': a, 'b': b, 'm': m, 'theta0': theta0, 'omega0': omega0, 't_end': t_end, 'gamma': 0.0
+        })
+
+        sol = _solve(models, params)
+        results = ResultAnalyzer.analyze(sol.t, sol.y[0], sol.y[1], params)
+
+        t = results['time']
+        theta_num = results['theta']
+
+        omega_n = _natural_frequency(params)
+        theta_lin = _theta_linear_undamped(t, theta0, omega0, omega_n)
+
+        assert np.allclose(theta_num, theta_lin, atol=2e-3)
+
+
+def test_nonlinear_no_friction_elliptic_solution(models):
+    # нелинейный маятник, без трения
+    A = math.radians(40.0)
+    params = _complete_params({
+        'a': 0.10, 'b': 0.20, 'm': 1.0,
+        'theta0': A, 'omega0': 0.0,
+        't_end': 4.0, 'gamma': 0.0
+    })
+
+    omega_n = _natural_frequency(params)
+    k = math.sin(A / 2.0)
+    mparam = k * k
+    K = ellipk(mparam)
+
+    T = 4.0 * K / omega_n
+    params['t_end'] = 2.0 * T
+
+    sol = _solve(models, params)
+    t = sol.t
+    sn, cn, dn, ph = ellipj(omega_n * t + K, mparam)
+    theta_exact = 2.0 * np.arcsin(k * sn)
+
+    theta_num = sol.y[0]
+    assert np.allclose(theta_num, theta_exact, atol=2e-3)
+
