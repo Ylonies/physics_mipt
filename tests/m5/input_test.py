@@ -26,14 +26,11 @@ def test_valid_inputs(inputs, monkeypatch):
     assert params['a'] > 0 and params['b'] > 0 and params['m'] > 0
     assert params['t_end'] > 0
     assert 'I' in params and 'l' in params
-    # check Steiner formula and l = b
     a, b, m = params['a'], params['b'], params['m']
     I_expected = 0.25 * m * (a*a + b*b) + m * b*b
     assert abs(params['I'] - I_expected) < 1e-12
     assert params['l'] == pytest.approx(b, abs=0.0)
-    # theta conversion
     assert params['theta0'] == pytest.approx(math.radians(params['theta0_deg']))
-    # gamma non-negative
     assert params['gamma'] >= 0.0
 
 

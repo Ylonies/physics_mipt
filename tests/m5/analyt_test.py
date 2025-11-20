@@ -29,17 +29,14 @@ def _natural_frequency(params, g=9.81):
 
 
 def _theta_linear_undamped(t, theta0, omega0, omega_n):
-    # theta(t) = theta0 cos(ω t) + (omega0/ω) sin(ω t)
     return theta0 * np.cos(omega_n * t) + (omega0 / omega_n) * np.sin(omega_n * t)
 
 
 def _theta_linear_damped(t, theta0, omega0, omega_n, I, gamma):
-    # beta = gamma / (2I), ωd = sqrt(ω0^2 - beta^2)
     beta = gamma / (2.0 * I)
     omega_d2 = max(omega_n**2 - beta**2, 0.0)
     omega_d = math.sqrt(omega_d2)
     if omega_d == 0.0:
-        # critically damped (rare in our tests) - fall back to numerical
         return np.full_like(t, theta0)
     exp_term = np.exp(-beta * t)
     return exp_term * (
@@ -55,11 +52,11 @@ def models():
 @pytest.fixture
 def base_params_small():
     return {
-        'a': 0.10,            # m (minor axis)
-        'b': 0.20,            # m (major axis)
-        'm': 1.0,             # kg
-        'theta0': math.radians(1.0),   # small angle
-        'omega0': 0.2,        # rad/s
+        'a': 0.10,
+        'b': 0.20,
+        'm': 1.0,
+        'theta0': math.radians(1.0),
+        'omega0': 0.2,
         't_end': 5.0,
         'gamma': 0.0
     }
@@ -84,10 +81,8 @@ def test_small_angle_undamped_matches_linear(models, base_params_small):
     omega_n = _natural_frequency(params)
     theta_lin = _theta_linear_undamped(t, params['theta0'], params['omega0'], omega_n)
 
-    # accuracy for small-angle, undamped
     assert np.allclose(theta_num, theta_lin, atol=1e-3)
 
-    # energy conservation (relative drift small)
     E = results['energy_total']
     assert (E.max() - E.min()) / max(E.max(), 1e-9) < 1e-3
 
@@ -95,10 +90,9 @@ def test_small_angle_undamped_matches_linear(models, base_params_small):
 def test_small_angle_damped_matches_linear(models, base_params_small):
     params = _complete_params(dict(base_params_small))
 
-    # choose damping well below critical: beta = 0.1 * omega_n
     omega_n = _natural_frequency(params)
     I = params['I']
-    params['gamma'] = 0.2 * I * omega_n  # beta = gamma/(2I) = 0.1 * omega_n
+    params['gamma'] = 0.2 * I * omega_n
 
     sol = _solve(models, params)
     results = ResultAnalyzer.analyze(sol, params)
@@ -109,7 +103,6 @@ def test_small_angle_damped_matches_linear(models, base_params_small):
     theta_lin = _theta_linear_damped(t, params['theta0'], params['omega0'], omega_n, I, params['gamma'])
     assert np.allclose(theta_num, theta_lin, atol=5e-3)
 
-    # energy should be non-increasing overall (allow tiny numerical ups)
     E = results['energy_total']
     dE = np.diff(E)
     assert np.sum(dE > 1e-6) <= 2
