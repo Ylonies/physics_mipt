@@ -39,6 +39,7 @@ class InputHandler:
     def get_parameters():
         params = {}
         params["N"] = InputHandler.get_int("Число частиц N", default=1000, min_value=100, max_value=5000)
+        
         T_C = InputHandler.get_float(
             "Начальная температура T0 (°C)", default=27.0, min_value=-100.0, max_value=1000.0
         )
@@ -47,12 +48,27 @@ class InputHandler:
         T_sim = T_K * cfg.kB / cfg.m
         params["T0"] = T_sim
 
-
-        params["piston_target"] = InputHandler.get_float("Конечное положение поршня x_final", default=0.7, min_value=0.4, max_value=1.0)
-
+        # Сначала выбираем режим
         print("Выберите режим процесса:")
+        print("0 - Без поршня (фиксированный объём)")
         print("1 — Квазистатический (медленное движение поршня)")
-        print("2 — Резкий переход (неквазистатический)")
-        mode = int(input("Ваш выбор [1/2]: ").strip())
+        print("2 — Резкий переход (быстрое движение поршня)")
+        while True:
+            try:
+                mode = int(input("Ваш выбор [0/1/2]: ").strip())
+                if mode not in (0, 1, 2):
+                    print("Выберите 0, 1 или 2.")
+                    continue
+                break
+            except:
+                continue
         params["mode"] = mode
+
+        if mode in (1, 2):
+            params["piston_target"] = InputHandler.get_float(
+                "Конечное положение поршня x_final", default=0.7, min_value=0.4, max_value=1.0
+            )
+        else:
+            params["piston_target"] = None 
+
         return params
