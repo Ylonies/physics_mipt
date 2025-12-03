@@ -66,7 +66,7 @@ class InputHandler:
 
         if mode in (1, 2):
             params["piston_target"] = InputHandler.get_float(
-                "Конечное положение поршня x_final", default=0.7, min_value=0.4, max_value=1.0
+                "Минимальное положение поршня x_final (x_start = 1)", default=0.7, min_value=0.4, max_value=1.0
             )
         else:
             params["piston_target"] = None 

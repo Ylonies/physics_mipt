@@ -1,4 +1,3 @@
-# result_visualizer.py
 import matplotlib.pyplot as plt
 import numpy as np
 from .config import SimulationConfig
@@ -6,7 +5,7 @@ from .config import SimulationConfig
 class ResultVisualizer:
 
     @staticmethod
-    def plot_basic(results):
+    def plot_basic(results, mode=0):
         cfg = SimulationConfig
 
         times = np.array(results["times"])
@@ -15,64 +14,96 @@ class ResultVisualizer:
         piston_xs = np.array(results["piston_xs"])
         pos_history = results["pos_history"]
         piston_x_history = results["piston_x_history"]
+        snapshot_indices = results["snapshot_indices"]
 
-        # объём газа
+        # --- вычисление объёмов ---
         volumes = piston_xs * cfg.Ly
 
-        # snapshot в начале и конце
-        snapshots_idx = [0, -1]
+        # нормализация объёма для пропорциональной шкалы
+        V_min = volumes.min()
+        V_max = volumes.max()
+        if V_max > V_min:
+            volumes_norm = (volumes - V_min) / (V_max - V_min)
+        else:
+            volumes_norm = np.zeros_like(volumes)
 
-        # --- усреднение давления для графика ---
-        # например, берем скользящее среднее за 1 секунду
-        dt = times[1] - times[0] if len(times) > 1 else 1.0
-        window_steps = max(1, int(1.0 / dt))  # шагов на 1 секунду
-        pressures_avg = np.convolve(pressures, np.ones(window_steps)/window_steps, mode='same')
+        # --- сглаживание давления ---
+        dt_step = times[1]-times[0] if len(times)>1 else 1.0
+        window_steps = max(1, int(1.0/dt_step))
+        n = len(pressures)
+        pressures_avg = []
+        times_avg = []
+        for start in range(0, n, window_steps):
+            end = min(start+window_steps, n)
+            pressures_avg.append(pressures[start:end].mean())
+            times_avg.append(times[start:end].mean())
+        pressures_avg = np.array(pressures_avg)
+        times_avg = np.array(times_avg)
 
-        # --- создаем единый холст 2x2 ---
-        fig, axes = plt.subplots(2,2, figsize=(14,10))
+        fig, axes = plt.subplots(2, 2, figsize=(14, 10))
 
-        # 1. Температура T(t)
+        # --- Температура ---
         axes[0,0].plot(times, temps, label="T(t)")
-        axes[0,0].scatter(times[snapshots_idx], temps[snapshots_idx], color='red', zorder=5,
-                          label='Snapshots')
+        for i, idx in enumerate(snapshot_indices):
+            idx = min(idx, len(times)-1)
+            axes[0,0].scatter(times[idx], temps[idx], s=80, color='red')
         axes[0,0].set_xlabel("t [s]")
-        axes[0,0].set_ylabel("Temperature T [K]")
+        axes[0,0].set_ylabel("Temperature [K]")
         axes[0,0].set_title("Temperature vs Time")
         axes[0,0].grid(True)
-        axes[0,0].legend()
 
-        axes[0,1].plot(times, pressures_avg, color="orange", label="P_avg(t)")
-        axes[0,1].scatter(times[snapshots_idx], pressures_avg[snapshots_idx], color='red', zorder=5,
-                        label='Snapshots')
-
+        # --- Давление ---
+        axes[0,1].plot(times, pressures, alpha=0.5, label="P_raw(t)")
+        axes[0,1].plot(times_avg, pressures_avg, label="P_avg(t)")
+        for i, idx in enumerate(snapshot_indices):
+            idx = min(idx, len(times)-1)
+            axes[0,1].scatter(times[idx], pressures[idx], s=80, color='red')
         axes[0,1].set_xlabel("t [s]")
-        axes[0,1].set_ylabel("Pressure P [Pa]")
-        axes[0,1].set_title("Average Pressure vs Time (1 s window)")
+        axes[0,1].set_ylabel("Pressure [Pa]")
+        axes[0,1].set_title("Pressure vs Time")
         axes[0,1].grid(True)
-        axes[0,1].legend()
 
-        # 3. Объём V(t)
-        axes[1,0].plot(times, volumes, color="green", label="V(t)")
-        axes[1,0].scatter(times[snapshots_idx], volumes[snapshots_idx], color='red', zorder=5,
-                          label='Snapshots')
+        # --- Объём (реальный, пропорциональный) ---
+        axes[1,0].plot(times, volumes, label="V(t)", color="blue")
         axes[1,0].set_xlabel("t [s]")
-        axes[1,0].set_ylabel("Volume V [m²]")
+        axes[1,0].set_ylabel("Volume [m²]")
         axes[1,0].set_title("Volume vs Time")
         axes[1,0].grid(True)
-        axes[1,0].legend()
 
-        for idx, snap_idx in enumerate(snapshots_idx):
-            pos = pos_history[snap_idx]
-            piston_x = piston_x_history[snap_idx]
-            axes[1,1].scatter(pos[:,0], pos[:,1], s=(cfg.radius*1000)**2, alpha=0.5,
-                              label=f"Snapshot {idx+1}, t ≈ {times[snap_idx]:.2f} s")
-            axes[1,1].axvline(piston_x, color="red", linestyle="--", label="Piston" if idx==0 else "")
+        # --- Snapshots частиц ---
+        colors = ["blue", "green"]
+        for i, si in enumerate(snapshot_indices):
+            if i < pos_history.shape[0]:
+                pos = pos_history[i]
+                piston_x = piston_x_history[i]  # поршень именно на этом snapshot
+                label_time = times[min(si, len(times)-1)] if len(times) > 0 else 0.0
+                axes[1,1].scatter(pos[:,0], pos[:,1], s=(cfg.radius*1000)**2, alpha=0.5,
+                                color=colors[i%len(colors)],
+                                label=f"Snapshot {i} (t≈{label_time:.2f}s)")
+                if mode != 0:
+                    axes[1,1].axvline(piston_x, color="red", linestyle="--",
+                                    linewidth=2, alpha=0.7,
+                                    label="Piston" if i==0 else "")
+
+        # --- Отдельная линия для конечного положения поршня ---
+        if len(piston_x_history) > 1:
+            axes[1,1].axvline(piston_x_history[1], color="red", linestyle="--",
+                            linewidth=2, alpha=0.7, label="Final Piston")
+
+
+        # уникальные метки легенды
+        handles, labels = axes[1,1].get_legend_handles_labels()
+        unique_labels = {}
+        for h, l in zip(handles, labels):
+            unique_labels[l] = h
+        axes[1,1].legend(unique_labels.values(), unique_labels.keys())
+
         axes[1,1].set_xlim(0, cfg.Lx*1.05)
         axes[1,1].set_ylim(0, cfg.Ly)
         axes[1,1].set_xlabel("x [m]")
         axes[1,1].set_ylabel("y [m]")
-        axes[1,1].set_title("Snapshots: Beginning & End")
-        axes[1,1].legend()
+        axes[1,1].set_title("Particle Snapshots")
+        axes[1,1].grid(True)
 
         plt.tight_layout()
         plt.show()
