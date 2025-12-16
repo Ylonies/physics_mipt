@@ -53,11 +53,12 @@ class InputHandler:
         print("0 - Без поршня (фиксированный объём)")
         print("1 — Квазистатический (медленное движение поршня)")
         print("2 — Резкий переход (быстрое движение поршня)")
+        print("3 — Резкий скачок внешнего давления (динамический поршень)")
         while True:
             try:
-                mode = int(input("Ваш выбор [0/1/2]: ").strip())
-                if mode not in (0, 1, 2):
-                    print("Выберите 0, 1 или 2.")
+                mode = int(input("Ваш выбор [0/1/2/3]: ").strip())
+                if mode not in (0, 1, 2, 3):
+                    print("Выберите 0, 1, 2 или 3.")
                     continue
                 break
             except:
@@ -68,6 +69,19 @@ class InputHandler:
             params["piston_target"] = InputHandler.get_float(
                 "Минимальное положение поршня x_final (x_start = 1)", default=0.7, min_value=0.4, max_value=1.0
             )
+        elif mode == 3:
+            V0 = cfg.Lx * cfg.Ly
+            P0 = params["N"] * cfg.kB * params["T0"] / V0
+            factor = InputHandler.get_float(
+                "Во сколько раз изменить внешнее давление (P_ext_final = factor * P0)",
+                default=2.0, min_value=0.1, max_value=20.0
+            )
+            params["P_ext_initial"] = P0
+            params["P_ext_final"] = factor * P0
+            params["t_pressure_step"] = InputHandler.get_float(
+                "Момент скачка давления t_step (с)", default=0.05, min_value=0.0, max_value=10.0
+            )
+            params["piston_target"] = None
         else:
             params["piston_target"] = None 
 
