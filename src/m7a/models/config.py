@@ -10,6 +10,5 @@ class SimulationConfig:
     cell_size = 0.01       
     Mp = 500.0
 
-    # 2D gas: only translational degrees of freedom.
     dof = 2
     gamma = (dof + 2) / dof

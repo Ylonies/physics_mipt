@@ -45,7 +45,6 @@ def test_pressure_step_final_state_close_to_theory():
     assert math.isfinite(V_sim) and math.isfinite(T_sim)
     assert V_th > 0 and T_th > 0
 
-    # It's a noisy finite-N MD model, so use a relatively soft tolerance.
     assert abs(V_sim - V_th) / V_th < 0.30
     assert abs(T_sim - T_th) / T_th < 0.30
 
@@ -91,7 +90,6 @@ def test_pressure_step_sound_speed_order_of_magnitude():
     assert math.isfinite(c_est) and c_est > 0
     assert est["fit_points"] >= 10
 
-    # Allow wide tolerance: we only need a sane agreement with theory.
     assert 0.4 * c_th <= c_est <= 2.5 * c_th
 
 

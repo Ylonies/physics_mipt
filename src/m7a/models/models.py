@@ -32,10 +32,6 @@ def _apply_walls(pos, vel, radius, Lx, Ly, m):
 
 @njit
 def _apply_walls_left_y(pos, vel, radius, Ly, m):
-    """
-    Walls: x=0, y=0, y=Ly (no right wall; it is handled separately by the piston).
-    Returns total x-impulse transferred to the x=0 wall (for diagnostics if needed).
-    """
     impulse = 0.0
     N = pos.shape[0]
     for i in range(N):
@@ -54,10 +50,6 @@ def _apply_walls_left_y(pos, vel, radius, Ly, m):
 
 @njit
 def _fill_density_profile_x(pos, out_density, nbins, Lx, Ly):
-    """
-    Fills out_density with number density n(x) in nbins bins over [0, Lx].
-    Units: 1/area in this 2D model.
-    """
     for b in range(nbins):
         out_density[b] = 0.0
     if nbins <= 0:
@@ -384,14 +376,11 @@ class PhysicsModels:
 
             _move_particles(pos, vel, dt)
 
-            # Keep the original behavior for modes 1/2:
-            # accumulate x-impulse from collisions with the vessel walls.
             impulse_accum += _apply_walls(pos, vel, radius, Lx, Ly, m)
 
             cells_idx, cells_count = _build_cells(pos, ncx, ncy, cell_w, cell_h, max_particles_per_cell)
             _particle_collisions(pos, vel, radius, ncx, ncy, cells_idx, cells_count)
 
-            # Moving boundary reflection (driven piston)
             for i in range(N):
                 if pos[i,0] + radius > x_p:
                     pos[i,0] = x_p - radius
@@ -426,12 +415,6 @@ class PhysicsModels:
                     if eq_counter >= consec_eq_required:
                         break
 
-            # safety: если всё ещё не достиг цели и шаги закончились, цикл завершится по max_steps
-
-        # финальная диагностика (если последний diag не записан)
-        # Важно: steps_done считается как (step_index + 1), поэтому "конечное время"
-        # соответствует (steps_done - 1) * dt. Иначе мы добавляем лишнюю точку и
-        # получаем искусственный провал давления в конец графика.
         end_step = steps_done - 1
         end_time = end_step * dt
         if diag_i == 0 or (diag_i > 0 and times[diag_i-1] < end_time - 1e-12):
@@ -439,7 +422,6 @@ class PhysicsModels:
             for i in range(N):
                 KE += 0.5 * m * (vel[i,0]**2 + vel[i,1]**2)
             temps[diag_i] = KE / (N * kB)
-            # pressure over the remainder since last diagnostic
             steps_since = end_step % diag_interval
             denom = Ly * steps_since * dt
             if denom > 0:
@@ -450,7 +432,6 @@ class PhysicsModels:
             piston_xs[diag_i] = x_p
             diag_i += 1
 
-        # конечный snapshot
         pos_history[1,:,:] = pos
         piston_x_history[1] = x_p
         snapshot_indices[1] = diag_i-1 if diag_i>0 else 0
@@ -468,12 +449,6 @@ class PhysicsModels:
         P_ext0, P_ext1, t_step,
         T_ref,
     ):
-        """
-        Dynamic piston under external pressure:
-        - For t < t_step: external pressure P_ext0
-        - For t >= t_step: external pressure P_ext1 (step change)
-        Piston interacts elastically with particles (1D collision in x).
-        """
         n_diag_max = max_steps // diag_interval + 2
         temps = np.zeros(n_diag_max)
         pressures = np.zeros(n_diag_max)
@@ -496,7 +471,6 @@ class PhysicsModels:
         steps_done = 0
         t_event = t_step
 
-        # equilibrium detection after the step
         v_eq_thresh = 1e-2
         vp_eq_thresh = 5e-3
         consec_eq_required = 8
@@ -506,9 +480,6 @@ class PhysicsModels:
         mass_sum = m + Mp
         a_p = 0.0
 
-        # Numerical stability for mode=3:
-        # use sub-stepping so the piston cannot "tunnel" through particles between collisions.
-        # The max displacement per sub-step is limited to a fraction of the particle radius.
         v_th = math.sqrt(kB * T_ref / m) if T_ref > 0 else 0.0
         max_move = 0.2 * radius
         if max_move <= 0.0:
@@ -523,7 +494,6 @@ class PhysicsModels:
 
             P_ext = P_ext0 if t < t_step else P_ext1
 
-            # choose number of sub-steps based on the piston and typical particle speed
             vp_abs = abs(v_p)
             n_sub_p = int(vp_abs * dt / max_move) + 1
             n_sub_g = int(v_th * dt / max_move) + 1
@@ -535,7 +505,6 @@ class PhysicsModels:
             dt_sub = dt / n_sub
 
             for _ in range(n_sub):
-                # external pressure accelerates the piston to the left
                 a_p = -(P_ext * Ly) / Mp
                 v_p += a_p * dt_sub
                 if v_p > v_cap:
@@ -557,7 +526,6 @@ class PhysicsModels:
                 cells_idx, cells_count = _build_cells(pos, ncx, ncy, cell_w, cell_h, max_particles_per_cell)
                 _particle_collisions(pos, vel, radius, ncx, ncy, cells_idx, cells_count)
 
-                # collisions with the piston (elastic 1D collision along x)
                 for i in range(N):
                     if pos[i, 0] + radius > x_p:
                         pos[i, 0] = x_p - radius

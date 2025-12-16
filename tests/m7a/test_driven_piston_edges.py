@@ -5,7 +5,6 @@ from m7a.models import PhysicsModels, SimulationConfig
 
 def _run_driven(piston_target: float):
     cfg = SimulationConfig
-    # Ensure the piston has enough time to reach the target in fast mode.
     drive_speed = 1.0
     steps_needed = int(abs(cfg.Lx - piston_target) / (drive_speed * cfg.dt)) + 2000
 
@@ -13,7 +12,7 @@ def _run_driven(piston_target: float):
     params = {
         "N": 200,
         "T0": 1.0,
-        "mode": 2,  # fast driven piston
+        "mode": 2,
         "piston_target": piston_target,
         "max_steps": steps_needed,
         "diag_interval": 25,

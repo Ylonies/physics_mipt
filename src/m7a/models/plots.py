@@ -16,7 +16,6 @@ class ResultVisualizer:
         piston_x_history = results["piston_x_history"]
         snapshot_indices = results["snapshot_indices"]
 
-        # --- вычисление объёмов ---
         volumes = piston_xs * cfg.Ly
 
         # нормализация объёма для пропорциональной шкалы
@@ -27,7 +26,6 @@ class ResultVisualizer:
         else:
             volumes_norm = np.zeros_like(volumes)
 
-        # --- сглаживание давления ---
         dt_step = times[1]-times[0] if len(times)>1 else 1.0
         window_steps = max(1, int(1.0/dt_step))
         n = len(pressures)
@@ -42,7 +40,6 @@ class ResultVisualizer:
 
         fig, axes = plt.subplots(2, 2, figsize=(14, 10))
 
-        # --- Температура ---
         axes[0,0].plot(times, temps, label="T(t)")
         for i, idx in enumerate(snapshot_indices):
             idx = min(idx, len(times)-1)
@@ -52,7 +49,6 @@ class ResultVisualizer:
         axes[0,0].set_title("Temperature vs Time")
         axes[0,0].grid(True)
 
-        # --- Давление ---
         axes[0,1].plot(times, pressures, alpha=0.5, label="P_raw(t)")
         axes[0,1].plot(times_avg, pressures_avg, label="P_avg(t)")
         for i, idx in enumerate(snapshot_indices):
@@ -63,14 +59,12 @@ class ResultVisualizer:
         axes[0,1].set_title("Pressure vs Time")
         axes[0,1].grid(True)
 
-        # --- Объём (реальный, пропорциональный) ---
         axes[1,0].plot(times, volumes, label="V(t)", color="blue")
         axes[1,0].set_xlabel("t [s]")
         axes[1,0].set_ylabel("Volume [m²]")
         axes[1,0].set_title("Volume vs Time")
         axes[1,0].grid(True)
 
-        # --- Snapshots частиц ---
         colors = ["blue", "green"]
         for i, si in enumerate(snapshot_indices):
             if i < pos_history.shape[0]:
@@ -85,13 +79,11 @@ class ResultVisualizer:
                                     linewidth=2, alpha=0.7,
                                     label="Piston" if i==0 else "")
 
-        # --- Отдельная линия для конечного положения поршня ---
         if len(piston_x_history) > 1:
             axes[1,1].axvline(piston_x_history[1], color="red", linestyle="--",
                             linewidth=2, alpha=0.7, label="Final Piston")
 
 
-        # уникальные метки легенды
         handles, labels = axes[1,1].get_legend_handles_labels()
         unique_labels = {}
         for h, l in zip(handles, labels):
