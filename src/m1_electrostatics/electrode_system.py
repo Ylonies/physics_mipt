@@ -3,6 +3,7 @@ import numpy as np
 from src.m1_electrostatics.models.grid_generator import GridGenerator
 from src.m1_electrostatics.models.input import InputHandler
 from src.m1_electrostatics.models.physics_model import PhysicsModel
+from src.m1_electrostatics.models.result_visualizer import ResultVisualizer
 
 
 class ElectrodeSystem:
@@ -24,7 +25,8 @@ class ElectrodeSystem:
             results = self._analyze_results(charges, points, params)
             self._print_results(results)
 
-            # ResultVisualizer.plot_all(points, charges, areas, params)
+            viz = ResultVisualizer()
+            viz.show_all_plots(points, charges, areas, params["R"], params["d"])
 
         except ValueError as e:
             print(f"Ошибка ввода: {e}")

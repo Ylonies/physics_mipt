@@ -59,7 +59,7 @@ class InputHandler:
         )
 
         params["n_rings"] = InputHandler.get_int(
-            "Количество концентрических колец (точность расчёта)", default=15, min_value=5, max_value=50
+            "Количество концентрических колец (точность расчёта)", default=30, min_value=5, max_value=60
         )
 
         return params
