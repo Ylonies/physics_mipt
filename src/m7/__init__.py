@@ -1,1 +1,2 @@
-"""Module m7: radio transmitter-receiver simulation."""
+from .main import RadioCommSim
+

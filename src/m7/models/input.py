@@ -1,4 +1,4 @@
-"""Input configuration for radio-link simulation."""
+"""Input layer for radio-link simulation."""
 
 from dataclasses import dataclass
 
@@ -24,3 +24,11 @@ class SimulationConfig:
     # Envelope detector and low-pass filter.
     envelope_scale: float = 1.0
     lowpass_tau_s: float = 6e-5
+
+
+class InputHandler:
+    """Provides simulation parameters, similar to other modules."""
+
+    @staticmethod
+    def get_parameters() -> SimulationConfig:
+        return SimulationConfig()

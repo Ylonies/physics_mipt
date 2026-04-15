@@ -54,3 +54,10 @@ def plot_simulation(result: SimulationResult, config: SimulationConfig) -> None:
     axes[4].legend(loc="upper right")
 
     plt.show()
+
+
+class ResultVisualizer:
+    @staticmethod
+    def plot(result: SimulationResult, config: SimulationConfig, model_name: str) -> None:
+        _ = model_name
+        plot_simulation(result, config)

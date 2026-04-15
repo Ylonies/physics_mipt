@@ -1,4 +1,4 @@
-"""Numerical simulation pipeline for the radio transmitter-receiver pair."""
+"""Numerical solver and physics model for the radio transmitter-receiver pair."""
 
 from __future__ import annotations
 
@@ -147,3 +147,22 @@ def run_simulation(config: SimulationConfig) -> SimulationResult:
         mse=mse,
         corrcoef=corrcoef,
     )
+
+
+class PhysicsModels:
+    """Builds the selected physical model in a unified interface."""
+
+    @staticmethod
+    def get_model(config: SimulationConfig) -> tuple[SimulationConfig, str]:
+        return config, "AM + HF noise + RLC + detector + RC"
+
+
+class RollingSolver:
+    """Executes selected model and returns simulation result."""
+
+    @staticmethod
+    def solve(config: SimulationConfig) -> SimulationResult:
+        return run_simulation(config)
+
+
+RadioSolver = RollingSolver
