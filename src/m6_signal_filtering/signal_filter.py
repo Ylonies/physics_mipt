@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import sys
 
 import numpy as np
 
@@ -10,6 +11,9 @@ from src.m6_signal_filtering.models import result_visualizer, simulation, spectr
 
 class SignalFilterLab:
     def run(self, *, save_plots: Path | None = None) -> None:
+        # Проверка параметров перед расчётами
+        self._validate_parameters()
+
         R, C = config.RC_R, config.RC_C
         wc, tau = transfer.rc_omega_c(R, C), R * C
         dt_rc = spectrum.suggest_dt(tau, 100 * wc)
@@ -44,7 +48,16 @@ class SignalFilterLab:
             rlc_data = (config.RLC_R, L, Cr, rlc_sweep, rlc_square)
 
         if save_plots is not None:
-            self._save_choice("ab", save_plots, R, C, rc_sweep, rc_square, rlc_data)
+            rc_fig = result_visualizer.build_rc_figures(
+                R, C, rc_sweep, rc_square, config.RC_U0, config.RC_SQUARE_PERIOD
+            )
+            result_visualizer.save_figures(save_plots, "m6_rc", rc_fig, None)
+            print(f"RC: {save_plots.resolve()}/m6_rc_main.png")
+            if rlc_data is not None:
+                Rl, L, Cr, sw, sq = rlc_data
+                rlc_fig = result_visualizer.build_rlc_figures(Rl, L, Cr, sw, sq, config.RLC_U0)
+                result_visualizer.save_figures(save_plots, "m6_rlc", rlc_fig, None)
+                print(f"RLC: {save_plots.resolve()}/m6_rlc_main.png")
             return
 
         choice = self._ask_plot_choice()
@@ -52,39 +65,79 @@ class SignalFilterLab:
             return
         self._render_choice(choice, R, C, rc_sweep, rc_square, rlc_data)
 
+    def _validate_parameters(self) -> None:
+        """Проверяет корректность параметров из config.py. При ошибке выводит сообщение и завершает программу."""
+        errors = []
+
+        # RC параметры
+        if config.RC_R <= 0:
+            errors.append(f"RC_R = {config.RC_R} → сопротивление должно быть > 0")
+        if config.RC_C <= 0:
+            errors.append(f"RC_C = {config.RC_C} → ёмкость должна быть > 0")
+        if config.RC_U0 <= 0:
+            errors.append(f"RC_U0 = {config.RC_U0} → амплитуда должна быть > 0")
+        if config.RC_T_MAX_HARM <= 0:
+            errors.append(f"RC_T_MAX_HARM = {config.RC_T_MAX_HARM} → время моделирования должно быть > 0")
+        if config.RC_SQUARE_PERIOD <= 0:
+            errors.append(f"RC_SQUARE_PERIOD = {config.RC_SQUARE_PERIOD} → период меандра должен быть > 0")
+        if config.RC_SQUARE_T_MAX <= 0:
+            errors.append(f"RC_SQUARE_T_MAX = {config.RC_SQUARE_T_MAX} → время моделирования меандра должно быть > 0")
+        if config.RC_FOURIER_K_MAX < 1:
+            errors.append(f"RC_FOURIER_K_MAX = {config.RC_FOURIER_K_MAX} → должно быть >= 1")
+        if len(config.RC_OMEGA_RATIOS) == 0:
+            errors.append("RC_OMEGA_RATIOS не должен быть пустым")
+        if np.any(config.RC_OMEGA_RATIOS <= 0):
+            errors.append("RC_OMEGA_RATIOS: все значения должны быть положительными")
+
+        # RLC параметры (проверяются, только если включены)
+        if config.RUN_RLC:
+            if config.RLC_R <= 0:
+                errors.append(f"RLC_R = {config.RLC_R} → сопротивление должно быть > 0")
+            if config.RLC_L <= 0:
+                errors.append(f"RLC_L = {config.RLC_L} → индуктивность должна быть > 0")
+            if config.RLC_C <= 0:
+                errors.append(f"RLC_C = {config.RLC_C} → ёмкость должна быть > 0")
+            if config.RLC_U0 <= 0:
+                errors.append(f"RLC_U0 = {config.RLC_U0} → амплитуда должна быть > 0")
+            if config.RLC_T_MAX_HARM <= 0:
+                errors.append(f"RLC_T_MAX_HARM = {config.RLC_T_MAX_HARM} → время моделирования должно быть > 0")
+            if config.RLC_SQUARE_T_MAX <= 0:
+                errors.append(f"RLC_SQUARE_T_MAX = {config.RLC_SQUARE_T_MAX} → время моделирования меандра должно быть > 0")
+            if config.RLC_FOURIER_K_MAX < 1:
+                errors.append(f"RLC_FOURIER_K_MAX = {config.RLC_FOURIER_K_MAX} → должно быть >= 1")
+            if len(config.RLC_OMEGA_RATIOS) == 0:
+                errors.append("RLC_OMEGA_RATIOS не должен быть пустым")
+            if np.any(config.RLC_OMEGA_RATIOS <= 0):
+                errors.append("RLC_OMEGA_RATIOS: все значения должны быть положительными")
+
+        if errors:
+            print("\nОшибка в config.py: некорректные параметры", file=sys.stderr)
+            for e in errors:
+                print(f"  • {e}", file=sys.stderr)
+            print("\nИсправьте параметры и запустите программу снова.", file=sys.stderr)
+            sys.exit(1)
+
     def _ask_plot_choice(self) -> str:
         print("\n--- Графики ---")
         print("  a — RC (фильтр нижних частот)")
         print("  b — RLC (полосовой, выход на R)")
-        print("  ab — оба набора")
         print("  n — без графиков")
         while True:
-            s = input("Выбор [a/b/ab/n]: ").strip().lower().replace(" ", "")
-            if s in ("a", "b", "ab", "n", "а", "б", "аб"):
-                return {"а": "a", "б": "b", "аб": "ab"}.get(s, s)
-            print("Введите a, b, ab или n.")
+            s = input("Выбор [a/b/n]: ").strip().lower().replace(" ", "")
+            if s in ("a", "b", "n", "а", "б"):
+                return {"а": "a", "б": "b"}.get(s, s)
+            print("Введите a, b или n.")
 
     def _render_choice(self, choice, R, C, rc_sweep, rc_square, rlc_data):
-        figs: list = []
-        if choice in ("a", "ab"):
-            figs.extend(result_visualizer.build_rc_figures(
+        if choice == "a":
+            fig = result_visualizer.build_rc_figures(
                 R, C, rc_sweep, rc_square, config.RC_U0, config.RC_SQUARE_PERIOD
-            ))
-        if choice in ("b", "ab") and rlc_data is not None:
+            )
+            result_visualizer.show_figures(fig)
+        elif choice == "b" and rlc_data is not None:
             Rl, L, Cr, sw, sq = rlc_data
-            figs.extend(result_visualizer.build_rlc_figures(Rl, L, Cr, sw, sq, config.RLC_U0))
-        result_visualizer.show_figures(*figs)
-
-    def _save_choice(self, choice, path, R, C, rc_sweep, rc_square, rlc_data):
-        if choice in ("a", "ab"):
-            f1, f2 = result_visualizer.build_rc_figures(R, C, rc_sweep, rc_square, config.RC_U0, config.RC_SQUARE_PERIOD)
-            result_visualizer.save_figures(path, "m6_rc", f1, f2)
-            print(f"RC: {path.resolve()}/m6_rc_main.png")
-        if choice in ("b", "ab") and rlc_data is not None:
-            Rl, L, Cr, sw, sq = rlc_data
-            f1, f2 = result_visualizer.build_rlc_figures(Rl, L, Cr, sw, sq, config.RLC_U0)
-            result_visualizer.save_figures(path, "m6_rlc", f1, f2)
-            print(f"RLC: {path.resolve()}/m6_rlc_main.png")
+            fig = result_visualizer.build_rlc_figures(Rl, L, Cr, sw, sq, config.RLC_U0)
+            result_visualizer.show_figures(fig)
 
     def _print_rc_header(self, R, C, wc, tau):
         print("\n=== RC: фильтр нижних частот ===")

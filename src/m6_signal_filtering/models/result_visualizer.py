@@ -13,10 +13,13 @@ def _style_ax(ax):
     ax.tick_params(labelsize=9)
 
 
-def build_rc_figures(R: float, C: float, sweep: list[dict], square: dict, u0: float, period: float) -> tuple[plt.Figure, plt.Figure]:
+def build_rc_figures(R: float, C: float, sweep: list[dict], square: dict, u0: float, period: float) -> plt.Figure:
     wc = transfer.rc_omega_c(R, C)
-    fig = plt.figure(figsize=(16, 9))
-    gs = fig.add_gridspec(3, 2, height_ratios=[1.1, 1.0, 1.0], hspace=0.42, wspace=0.32, left=0.07, right=0.97, top=0.92, bottom=0.08)
+
+    # одна общая фигура, объединяющая все подграфики
+    fig = plt.figure(figsize=(14, 12))
+    gs = fig.add_gridspec(4, 2, hspace=0.35, wspace=0.28,
+                          left=0.07, right=0.97, top=0.94, bottom=0.06)
 
     ax_mag = fig.add_subplot(gs[0, 0])
     w = np.logspace(np.log10(0.01 * wc), np.log10(100 * wc), 400)
@@ -65,14 +68,12 @@ def build_rc_figures(R: float, C: float, sweep: list[dict], square: dict, u0: fl
     ax_p.set_title("Установившаяся фаза")
     ax_p.legend(fontsize=8)
     _style_ax(ax_p)
-    fig.suptitle("RC: фильтр нижних частот", fontsize=14)
 
-    fig_sq = plt.figure(figsize=(16, 5))
-    gs2 = fig_sq.add_gridspec(1, 2, wspace=0.28, left=0.06, right=0.97, top=0.88, bottom=0.14)
     T = period
     t = square["t"]
     mask = (t >= t[-1] - 2 * T) & (t <= t[-1])
-    ax_t = fig_sq.add_subplot(gs2[0, 0])
+
+    ax_t = fig.add_subplot(gs[3, 0])
     ax_t.plot(t[mask] * 1e3, square["u_in"][mask], label="вход")
     ax_t.plot(t[mask] * 1e3, square["u_out"][mask], label="выход")
     ax_t.plot(t[mask] * 1e3, square["u_syn"][mask], "--", label="синтез", alpha=0.85)
@@ -82,7 +83,7 @@ def build_rc_figures(R: float, C: float, sweep: list[dict], square: dict, u0: fl
     ax_t.legend(fontsize=8)
     _style_ax(ax_t)
 
-    ax_s = fig_sq.add_subplot(gs2[0, 1])
+    ax_s = fig.add_subplot(gs[3, 1])
     n = min(7, len(square["ks_fft"]))
     x = np.arange(n)
     bw = 0.35
@@ -95,16 +96,17 @@ def build_rc_figures(R: float, C: float, sweep: list[dict], square: dict, u0: fl
     ax_s.set_title("Спектр выхода")
     ax_s.legend(fontsize=8)
     _style_ax(ax_s)
-    fig_sq.suptitle("RC: меандр", fontsize=13)
-    return fig, fig_sq
+
+    fig.suptitle("RC: фильтр нижних частот (объединённый график)", fontsize=14)
+    return fig
 
 
-def build_rlc_figures(
-    R: float, L: float, C: float, sweep: list[dict], square: dict | None, u0: float
-) -> tuple[plt.Figure, plt.Figure | None]:
+def build_rlc_figures(R: float, L: float, C: float, sweep: list[dict], square: dict | None, u0: float) -> plt.Figure:
     w0 = transfer.rlc_omega_0(L, C)
-    fig = plt.figure(figsize=(16, 9))
-    gs = fig.add_gridspec(3, 2, height_ratios=[1.1, 1.0, 1.0], hspace=0.42, wspace=0.32, left=0.07, right=0.97, top=0.92, bottom=0.08)
+
+    fig = plt.figure(figsize=(14, 12))
+    gs = fig.add_gridspec(4, 2, hspace=0.35, wspace=0.28,
+                          left=0.07, right=0.97, top=0.94, bottom=0.06)
 
     ax_mag = fig.add_subplot(gs[0, 0])
     w = np.logspace(np.log10(0.3 * w0), np.log10(3 * w0), 400)
@@ -151,24 +153,23 @@ def build_rlc_figures(
     ax_p.set_title("Установившаяся фаза")
     ax_p.legend(fontsize=8)
     _style_ax(ax_p)
-    fig.suptitle("RLC: полосовой фильтр (выход на R)", fontsize=14)
 
-    fig_sq = None
     if square is not None:
-        fig_sq = plt.figure(figsize=(16, 5))
-        gs2 = fig_sq.add_gridspec(1, 2, wspace=0.28, left=0.06, right=0.97, top=0.88, bottom=0.14)
         T = 2 * np.pi / w0
         t = square["t"]
         mask = (t >= t[-1] - 2 * T) & (t <= t[-1])
-        ax_t = fig_sq.add_subplot(gs2[0, 0])
+
+        ax_t = fig.add_subplot(gs[3, 0])
         ax_t.plot(t[mask] * 1e3, square["u_in"][mask], label="вход")
         ax_t.plot(t[mask] * 1e3, square["u_out"][mask], label="выход")
         ax_t.plot(t[mask] * 1e3, square["u_syn"][mask], "--", label="синтез", alpha=0.85)
         ax_t.set_xlabel("t, мс")
+        ax_t.set_ylabel("U, В")
         ax_t.set_title("Меандр (период ≈ 1/ω₀)")
         ax_t.legend(fontsize=8)
         _style_ax(ax_t)
-        ax_s = fig_sq.add_subplot(gs2[0, 1])
+
+        ax_s = fig.add_subplot(gs[3, 1])
         n = min(7, len(square["ks_fft"]))
         x = np.arange(n)
         bw = 0.35
@@ -176,16 +177,17 @@ def build_rlc_figures(
         ax_s.bar(x + bw / 2, square["amps_ana"][:n], bw, label="аналит.")
         ax_s.set_xticks(x)
         ax_s.set_xticklabels([str(int(k)) for k in square["ks_fft"][:n]])
+        ax_s.set_xlabel("гармоника k")
+        ax_s.set_ylabel("A_k, В")
         ax_s.set_title("Спектр выхода")
         ax_s.legend(fontsize=8)
         _style_ax(ax_s)
-        fig_sq.suptitle("RLC: меандр", fontsize=13)
-    return fig, fig_sq
+
+    fig.suptitle("RLC: полосовой фильтр (выход на R) — объединённый график", fontsize=14)
+    return fig
 
 
 def show_figures(*figs: plt.Figure | None):
-    import matplotlib.pyplot as plt
-
     for f in figs:
         if f is not None:
             plt.figure(f.number)
