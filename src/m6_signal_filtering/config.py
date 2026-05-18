@@ -1,0 +1,20 @@
+import numpy as np
+
+RC_R = 1000.0
+RC_C = 1e-6
+RC_U0 = 1.0
+RC_OMEGA_RATIOS = np.array([0.1, 0.5, 1.0, 2.0, 10.0])
+RC_T_MAX_HARM = 0.05
+RC_SQUARE_PERIOD = 0.01
+RC_SQUARE_T_MAX = 0.1
+RC_FOURIER_K_MAX = 31
+
+RLC_R = 10.0
+RLC_L = 0.01
+RLC_C = 1e-6
+RLC_U0 = 1.0
+RLC_OMEGA_RATIOS = np.array([0.5, 0.8, 1.0, 1.2, 1.5])
+RLC_T_MAX_HARM = 0.02
+RLC_SQUARE_T_MAX = 0.02
+RLC_FOURIER_K_MAX = 21
+RUN_RLC = True
