@@ -6,43 +6,51 @@ import numpy as np
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../src")))
 
 from m5.models import PhysicsModels, ResultAnalyzer, RollingSolver
+from m5.models.input import DEFAULTS
 
 
-def _base_params():
-    return {
-        "epsilon_v": 1.2,
-        "r_ohm": 8.0,
-        "l_h": 1e-3,
-        "c_f": 2e-6,
-        "u0_v": 0.2,
-        "i0_a": 0.0,
-        "t_end_s": 0.02,
-        "n_points": 4000,
-        "a_a_per_v3": 4e-3,
-        "b_a_per_v2": -16e-3,
-        "c_a_per_v": 17e-3,
-    }
+def _base_params(**kw):
+    p = {**DEFAULTS}
+    p.update(kw)
+    return p
 
 
 def test_diode_piecewise_current():
-    p = _base_params()
     model = PhysicsModels()
-    assert model.diode_current(-0.5, p) == 0.0
-    assert model.diode_current(0.0, p) == 0.0
-    assert model.diode_current(0.5, p) > 0.0
+    assert model.diode_current(-0.5, _base_params()) == 0.0
+    assert model.diode_current(0.0, _base_params()) == 0.0
+    assert model.diode_current(0.5, _base_params()) > 0.0
 
 
-def test_solution_shapes_and_finite_values():
-    params = _base_params()
-    model_func, name = PhysicsModels().get_model(params)
-    solution = RollingSolver().solve(model_func, params)
-    metrics = ResultAnalyzer.analyze(solution, params, name)
+def test_dc_point_in_negative_resistance_branch():
+    p = _base_params()
+    u0, i0 = PhysicsModels.find_dc_operating_point(p)
+    g = PhysicsModels.diode_conductance(u0, p)
+    assert 0.73 < u0 < 1.93
+    assert g < 0
+    assert i0 > 0
 
-    t = solution["time"]
-    assert t.ndim == 1
-    assert solution["u_diode_v"].shape == t.shape
-    assert solution["i_inductor_a"].shape == t.shape
-    assert np.all(np.isfinite(solution["u_diode_v"]))
-    assert np.all(np.isfinite(solution["i_inductor_a"]))
-    assert metrics["u_max_abs"] >= 0.0
-    assert 0.0 <= metrics["sine_purity"] <= 1.0
+
+def test_linear_criterion_oscillation_for_defaults():
+    p = _base_params()
+    lin = PhysicsModels.linear_oscillation_criterion(p)
+    assert lin["can_oscillate_linear"]
+
+
+def test_defaults_show_self_oscillation():
+    p = _base_params()
+    model_func, name = PhysicsModels().get_model(p)
+    solution = RollingSolver().solve(model_func, p)
+    metrics = ResultAnalyzer.analyze(solution, p, name)
+    assert metrics["self_oscillation"]
+    assert metrics["u_amplitude_steady"] > 0.05
+    assert metrics["fundamental_freq_hz"] > 100
+
+
+def test_high_r_damps_oscillation():
+    p = _base_params(r_ohm=50.0, u0_v=1.15)
+    lin = PhysicsModels.linear_oscillation_criterion(p)
+    assert not lin["can_oscillate_linear"]
+    model_func, name = PhysicsModels().get_model(p)
+    metrics = ResultAnalyzer.analyze(RollingSolver().solve(model_func, p), p, name)
+    assert not metrics["self_oscillation"]

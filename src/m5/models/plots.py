@@ -15,7 +15,7 @@ class ResultVisualizer:
 
         axes[0, 0].plot(t, u, lw=1.2, label="U_D(t)")
         axes[0, 0].set_title("Напряжение на туннельном диоде")
-        axes[0, 0].set_xlabel("t, c")
+        axes[0, 0].set_xlabel("t, с")
         axes[0, 0].set_ylabel("U, В")
         axes[0, 0].grid(True, alpha=0.3)
         axes[0, 0].legend(loc="upper right")
@@ -23,7 +23,7 @@ class ResultVisualizer:
         axes[0, 1].plot(t, i, lw=1.2, label="I_L(t)")
         axes[0, 1].plot(t, id_d, lw=1.0, label="I_D(t)")
         axes[0, 1].set_title("Токи в контуре")
-        axes[0, 1].set_xlabel("t, c")
+        axes[0, 1].set_xlabel("t, с")
         axes[0, 1].set_ylabel("I, А")
         axes[0, 1].grid(True, alpha=0.3)
         axes[0, 1].legend(loc="upper right")
